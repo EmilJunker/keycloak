@@ -23,9 +23,9 @@ client_url = "http://localhost:5000"
 callback_url = "http://localhost:5000/callback"
 
 
-@app.route("/")
+@app.route("/login")
 def login():
-    """Step 1: User Authorization.
+    """Step 1: User authorization.
 
     Redirect the user (resource owner) to the identity provider (Keycloak).
     """
@@ -55,9 +55,9 @@ def callback():
     # we do that, we will verify the token.
 
     if verify_token(oauth_token.get("access_token")):
-        # Save the token and then redirect the user to the /profile endpoint.
+        # Save the token and then redirect the user to the home page.
         session["oauth_token"] = oauth_token
-        return redirect(url_for(".profile"))
+        return redirect(url_for(".home"))
     else:
         return "the token is invalid"
 
@@ -84,33 +84,58 @@ def verify_token(token):
     # If the token is valid, we can now decode it using the public key.
     try:
         decoded = jwt.decode(token, key, audience=payload["aud"], algorithms=header["alg"])
+        session["user"] = payload["name"]
         return True
     except Exception as e:
         print(str(e))
         return False
 
 
+@app.route("/")
+def home():
+    """Step 5: User authorization successful.
+
+    Show a welcome message and display the token.
+    """
+    if not "oauth_token" in session:
+        return redirect(url_for(".login"))
+    if not verify_token(session['oauth_token'].get("access_token")):
+        return redirect(url_for(".login"))
+
+    user = session['user']
+    token = session['oauth_token'].get("access_token")
+    return """
+    <h1>Welcome {}!</h1>
+    <code style="overflow-wrap:anywhere">Your access token: <br/> {}</code>
+    <p><a href="/profile">Profile</a></p>
+    <p><a href="/logout">Logout</a></p>
+    """.format(user, token)
+
+
 @app.route("/profile", methods=["GET"])
 def profile():
-    """ Step 5: Fetching protected resources using the access token.
+    """ Step 6: Fetching protected resources using the access token.
 
     Use the access token to fetch some information about the user from the
     identity provider.
     """
     if not "oauth_token" in session:
-        return redirect("/")
+        return redirect(url_for(".login"))
+    if not verify_token(session['oauth_token'].get("access_token")):
+        return redirect(url_for(".login"))
+
     oauth = OAuth2Session(client_id, token=session["oauth_token"])
     return jsonify(oauth.get(protected_url, verify=False).json())
 
 
 @app.route("/logout", methods=["GET"])
 def logout():
-    """ Step 6: Logout the user.
+    """ Step 7: Logout the user.
 
     End the session for the user and redirect back to the client base URL.
     """
     if not "oauth_token" in session:
-        return redirect("/")
+        return redirect(url_for(".login"))
     session.clear()
     return redirect(f"{logout_url}?redirect_uri={quote(client_url)}")
 
