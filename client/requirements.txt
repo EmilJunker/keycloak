@@ -1,0 +1,4 @@
+pyjwt
+requests
+requests_oauthlib
+flask

@@ -1,6 +1,14 @@
 version: '3'
 
 services:
+    example-client:
+        build: ./client/
+        container_name: client
+        networks:
+            - keycloak-network
+        ports:
+            - "5000:5000"
+
     keycloak-server:
         image: jboss/keycloak
         # command: /opt/jboss/tools/docker-entrypoint.sh -b 0.0.0.0 -bmanagement 0.0.0.0
