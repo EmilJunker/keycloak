@@ -15,18 +15,18 @@ app = Flask(__name__)
 # OAuth config information
 client_id = "myclient"
 client_secret = None
-authorization_base_url = "https://localhost:8443/auth/realms/simple/protocol/openid-connect/auth"
-token_url = "https://localhost:8443/auth/realms/simple/protocol/openid-connect/token"
-protected_url = "https://localhost:8443/auth/realms/simple/protocol/openid-connect/userinfo"
-logout_url = "https://localhost:8443/auth/realms/simple/protocol/openid-connect/logout"
-client_url = "http://localhost:5000"
-callback_url = "http://localhost:5000/callback"
-# authorization_base_url = "https://oai-pmh-test.basisit.de:8443/auth/realms/simple/protocol/openid-connect/auth"
-# token_url = "https://oai-pmh-test.basisit.de:8443/auth/realms/simple/protocol/openid-connect/token"
-# protected_url = "https://oai-pmh-test.basisit.de:8443/auth/realms/simple/protocol/openid-connect/userinfo"
-# logout_url = "https://oai-pmh-test.basisit.de:8443/auth/realms/simple/protocol/openid-connect/logout"
-# client_url = "http://oai-pmh-test.basisit.de:5000"
-# callback_url = "http://oai-pmh-test.basisit.de:5000/callback"
+# authorization_base_url = "https://localhost:8443/auth/realms/simple/protocol/openid-connect/auth"
+# token_url = "https://localhost:8443/auth/realms/simple/protocol/openid-connect/token"
+# protected_url = "https://localhost:8443/auth/realms/simple/protocol/openid-connect/userinfo"
+# logout_url = "https://localhost:8443/auth/realms/simple/protocol/openid-connect/logout"
+# client_url = "http://localhost:5000"
+# callback_url = "http://localhost:5000/callback"
+authorization_base_url = "https://oai-pmh-test.basisit.de:8443/auth/realms/simple/protocol/openid-connect/auth"
+token_url = "https://oai-pmh-test.basisit.de:8443/auth/realms/simple/protocol/openid-connect/token"
+protected_url = "https://oai-pmh-test.basisit.de:8443/auth/realms/simple/protocol/openid-connect/userinfo"
+logout_url = "https://oai-pmh-test.basisit.de:8443/auth/realms/simple/protocol/openid-connect/logout"
+client_url = "http://oai-pmh-test.basisit.de:5000"
+callback_url = "http://oai-pmh-test.basisit.de:5000/callback"
 
 
 @app.route("/login")
@@ -151,5 +151,5 @@ if __name__ == "__main__":
     os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
 
     app.secret_key = os.urandom(24)
-    app.run(debug=True)
-    # app.run(host="0.0.0.0", debug=True)
+    # app.run(debug=True)
+    app.run(host="0.0.0.0", debug=True)

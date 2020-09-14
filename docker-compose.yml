@@ -1,6 +1,14 @@
 version: '3'
 
 services:
+    nginx:
+        build: .
+        container_name: nginx
+        ports:
+            - '8443:443'
+        networks:
+            - keycloak-network
+
     example-client:
         build: ./client/
         container_name: client
@@ -11,22 +19,19 @@ services:
 
     keycloak-server:
         image: jboss/keycloak
-        # command: /opt/jboss/tools/docker-entrypoint.sh -b 0.0.0.0 -bmanagement 0.0.0.0
         container_name: keycloak
         networks:
             - keycloak-network
-        ports:
-            - "8080:8080"
-            - "8443:8443"
+        # ports:
+        #     - "8080:8080"
+        #     - "8443:8443"
         environment:
             - KEYCLOAK_USER=admin
             - KEYCLOAK_PASSWORD=adminpw
             - DB_USER=keycloak
             - DB_PASSWORD=keycloakpw
-            # - KEYCLOAK_HOSTNAME=oai-pmh-test.basisit.de
-            # - PROXY_ADDRESS_FORWARDING=true
-        # volumes:
-        #     - "/net/home/mch/keycloak/certs/:/etc/x509/https"
+            - PROXY_ADDRESS_FORWARDING=true
+            - KEYCLOAK_HOSTNAME=oai-pmh-test.basisit.de
 
     mysql-db:
         image: mysql
@@ -38,8 +43,6 @@ services:
             - MYSQL_USER=keycloak
             - MYSQL_PASSWORD=keycloakpw
             - MYSQL_ROOT_PASSWORD=rootpw
-        # volumes:
-        #     - /net/home/mch/keycloak/data:/var/lib/mysql
 
 networks:
     keycloak-network:
