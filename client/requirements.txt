@@ -1,4 +1,5 @@
 pyjwt
+cryptography
 requests
 requests_oauthlib
 flask
