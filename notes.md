@@ -17,6 +17,12 @@ curl -d "client_id=admin-cli" -d "username=admin" -d "password=adminpw" -d "gran
 
 
 
+## Get a new Token using a Refresh Token / Offline Token
+
+curl -d "client_id=admin-cli" -d "refresh_token=abc" -d "grant_type=refresh_token" -k "https://localhost:8443/auth/realms/master/protocol/openid-connect/token"
+
+
+
 ## Get a Token (incl. ID Token) via login > redirect > access_code
 
 https://localhost:8443/auth/realms/simple/protocol/openid-connect/auth?client_id=myclient&redirect_uri=http://localhost/test&scope=openid&response_type=code
@@ -75,6 +81,23 @@ curl -X GET --header "Content-Type: application/json" --header "Authorization: b
 curl -X PUT --header "Content-Type: application/json" --header "Authorization: bearer abc" -d '{"value":"testpw"}' -k "https://localhost:8443/auth/admin/realms/simple/users/XXX/reset-password"
 
 curl -X PUT --header "Content-Type: application/json" --header "Authorization: bearer abc" -d '["UPDATE_PASSWORD"]' -k "https://localhost:8443/auth/admin/realms/simple/users/XXX/execute-actions-email"
+
+
+
+
+
+## Certificates
+
+### Create CA
+
+openssl genrsa -out cakey.pem 4096
+openssl req -x509 -new -nodes -key cakey.pem -sha256 -days 1024 -out cacert.pem
+
+### Issue cert
+
+openssl genrsa -out key.pem 2048
+openssl req -new -key key.pem -out cert.csr
+openssl x509 -req -in cert.csr -CA cacert.pem -CAkey cakey.pem -CAcreateserial -out cert.pem -days 500 -sha256
 
 
 
