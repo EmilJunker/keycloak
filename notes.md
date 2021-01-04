@@ -25,62 +25,62 @@ curl -d "client_id=admin-cli" -d "refresh_token=abc" -d "grant_type=refresh_toke
 
 ## Get a Token (incl. ID Token) via login > redirect > access_code
 
-https://localhost:8443/auth/realms/simple/protocol/openid-connect/auth?client_id=myclient&redirect_uri=http://localhost/test&scope=openid&response_type=code
+https://localhost:8443/auth/realms/master/protocol/openid-connect/auth?client_id=myclient&redirect_uri=http://localhost/test&scope=openid&response_type=code
 
 redirect -> ``http://localhost/test
               ?session_state=bla
               &code=xyz``
 
 use code to obtain token -> 
-``curl -d "client_id=myclient" -d "redirect_uri=http://localhost/test" -d "grant_type=authorization_code" -d "code=xyz" -k "https://localhost:8443/auth/realms/simple/protocol/openid-connect/token"``
+``curl -d "client_id=myclient" -d "redirect_uri=http://localhost/test" -d "grant_type=authorization_code" -d "code=xyz" -k "https://localhost:8443/auth/realms/master/protocol/openid-connect/token"``
 
 
 
 ## Get User Info
 
-curl -d "access_token=abc" -k "https://localhost:8443/auth/realms/simple/protocol/openid-connect/userinfo"
+curl -d "access_token=abc" -k "https://localhost:8443/auth/realms/master/protocol/openid-connect/userinfo"
 
 
 
 ## Realm Info (incl. public key)
 
-https://localhost:8443/auth/realms/simple
+https://localhost:8443/auth/realms/master
 
-https://localhost:8443/auth/realms/simple/.well-known/openid-configuration
+https://localhost:8443/auth/realms/master/.well-known/openid-configuration
 
 
 
 ## User Account UI (incl. linking accounts)
 
-https://localhost:8443/auth/realms/simple/account
+https://localhost:8443/auth/realms/master/account
 
 
 
 ## Admin REST API examples
 
-curl -X GET --header "Content-Type: application/json" --header "Authorization: bearer abc" -k "https://localhost:8443/auth/admin/realms/simple"
+curl -X GET --header "Content-Type: application/json" --header "Authorization: bearer abc" -k "https://localhost:8443/auth/admin/realms/master"
 
 curl -X PUT --header "Content-Type: application/json" --header "Authorization: bearer abc" -d '{"id":"master","realm":"master",...}' -k "https://localhost:8443/auth/admin/realms/master"
 
-curl -X POST --header "Content-Type: application/json" --header "Authorization: bearer abc" -d '{"id":"simple","realm":"simple",...}' -k "https://localhost:8443/auth/admin/realms"
+curl -X POST --header "Content-Type: application/json" --header "Authorization: bearer abc" -d '{"id":"master","realm":"master",...}' -k "https://localhost:8443/auth/admin/realms"
 
-curl -X GET --header "Content-Type: application/json" --header "Authorization: bearer abc" -k "https://localhost:8443/auth/admin/realms/simple/identity-provider/instances"
+curl -X GET --header "Content-Type: application/json" --header "Authorization: bearer abc" -k "https://localhost:8443/auth/admin/realms/master/identity-provider/instances"
 
-curl -X POST --header "Content-Type: application/json" --header "Authorization: bearer abc" -d '{"alias":"helmholtz-berlin.de",...}' -k "https://localhost:8443/auth/admin/realms/simple/identity-provider/instances"
+curl -X POST --header "Content-Type: application/json" --header "Authorization: bearer abc" -d '{"alias":"helmholtz-berlin.de",...}' -k "https://localhost:8443/auth/admin/realms/master/identity-provider/instances"
 
-curl -X GET --header "Content-Type: application/json" --header "Authorization: bearer abc" -k "https://localhost:8443/auth/admin/realms/simple/clients"
+curl -X GET --header "Content-Type: application/json" --header "Authorization: bearer abc" -k "https://localhost:8443/auth/admin/realms/master/clients"
 
-curl -X POST --header "Content-Type: application/json" --header "Authorization: bearer abc" -d '{"id":"918d2fec-f8e7-40d9-a9d1-cc2c38023b35",...}' -k "https://localhost:8443/auth/admin/realms/simple/clients"
+curl -X POST --header "Content-Type: application/json" --header "Authorization: bearer abc" -d '{"id":"918d2fec-f8e7-40d9-a9d1-cc2c38023b35",...}' -k "https://localhost:8443/auth/admin/realms/master/clients"
 
-curl -X GET --header "Content-Type: application/json" --header "Authorization: bearer abc" -k "https://localhost:8443/auth/admin/realms/simple/users"
+curl -X GET --header "Content-Type: application/json" --header "Authorization: bearer abc" -k "https://localhost:8443/auth/admin/realms/master/users"
 
-curl -X GET --header "Content-Type: application/json" --header "Authorization: bearer abc" -k "https://localhost:8443/auth/admin/realms/simple/users/XXX/federated-identity"
+curl -X GET --header "Content-Type: application/json" --header "Authorization: bearer abc" -k "https://localhost:8443/auth/admin/realms/master/users/XXX/federated-identity"
 
-curl -X GET --header "Content-Type: application/json" --header "Authorization: bearer abc" -k "https://localhost:8443/auth/admin/realms/simple/users/XXX/configured-user-storage-credential-types"
+curl -X GET --header "Content-Type: application/json" --header "Authorization: bearer abc" -k "https://localhost:8443/auth/admin/realms/master/users/XXX/configured-user-storage-credential-types"
 
-curl -X PUT --header "Content-Type: application/json" --header "Authorization: bearer abc" -d '{"value":"testpw"}' -k "https://localhost:8443/auth/admin/realms/simple/users/XXX/reset-password"
+curl -X PUT --header "Content-Type: application/json" --header "Authorization: bearer abc" -d '{"value":"testpw"}' -k "https://localhost:8443/auth/admin/realms/master/users/XXX/reset-password"
 
-curl -X PUT --header "Content-Type: application/json" --header "Authorization: bearer abc" -d '["UPDATE_PASSWORD"]' -k "https://localhost:8443/auth/admin/realms/simple/users/XXX/execute-actions-email"
+curl -X PUT --header "Content-Type: application/json" --header "Authorization: bearer abc" -d '["UPDATE_PASSWORD"]' -k "https://localhost:8443/auth/admin/realms/master/users/XXX/execute-actions-email"
 
 
 
@@ -104,6 +104,9 @@ openssl x509 -req -in cert.csr -CA cacert.pem -CAkey cakey.pem -CAcreateserial -
 
 
 ## Useful links etc.
+
+### OAuth 2.0 and OpenID Connect
+https://blog.runscope.com/posts/understanding-oauth-2-and-openid-connect
 
 ### Token decoder tool
 https://jwt.io/
