@@ -1,6 +1,8 @@
 import base64
+import configparser
 import json
 import os
+from datetime import datetime
 from urllib.parse import quote
 
 import jwt
@@ -13,131 +15,154 @@ app = Flask(__name__)
 
 
 # OAuth config information
-client_id = "myclient"
-client_secret = None
-authorization_base_url = "https://localhost:8443/auth/realms/simple/protocol/openid-connect/auth"
-token_url = "https://localhost:8443/auth/realms/simple/protocol/openid-connect/token"
-protected_url = "https://localhost:8443/auth/realms/simple/protocol/openid-connect/userinfo"
-logout_url = "https://localhost:8443/auth/realms/simple/protocol/openid-connect/logout"
-client_url = "http://localhost:5000"
-callback_url = "http://localhost:5000/callback"
+config = configparser.ConfigParser()
+s = config.read("/workspaces/keycloak/client/config.cfg")
 
-
-@app.route("/login")
-def login():
-    """Step 1: User authorization.
-
-    Redirect the user (resource owner) to the identity provider (Keycloak).
-    """
-    oauth = OAuth2Session(client_id, redirect_uri=callback_url, scope="openid")
-    authorization_url, state = oauth.authorization_url(authorization_base_url)
-
-    # State is used to prevent CSRF, keep this for later.
-    session["oauth_state"] = state
-    return redirect(authorization_url)
-
-
-# Step 2: User authorization, this happens on the identity provider.
-
-@app.route("/callback", methods=["GET"])
-def callback():
-    """ Step 3: Retrieving an access token.
-
-    The user has been redirected back from the identity provider to this
-    callback URL. With the redirection comes an authorization code included in
-    the URL. We will use that authorization code to obtain an access token.
-    """
-    oauth = OAuth2Session(client_id, redirect_uri=callback_url, state=session["oauth_state"])
-    oauth_token = oauth.fetch_token(token_url, client_secret=client_secret, authorization_response=request.url, verify=False)
-
-    # Now we have an access token. The access token includes basic user info.
-    # The user can use the access token to fetch protected resources. But before
-    # we do that, we will verify the token.
-
-    if verify_token(oauth_token.get("access_token")):
-        # Save the token and then redirect the user to the home page.
-        session["oauth_token"] = oauth_token
-        return redirect(url_for(".home"))
-    else:
-        return "the token is invalid"
-
-
-def verify_token(token):
-    """ Step 4: Verifying the token.
-
-    Verify the token using the issuer's public key. This happens on the client.
-    """
-    # Decode all three parts of the token (it is Base64 encoded).
-    decoded_token = [
-        base64.urlsafe_b64decode(d + "=" * (-len(d) % 4))
-        for d in token.split(".")
-    ]
-    header = json.loads(decoded_token[0])
-    payload = json.loads(decoded_token[1])
-    signature = decoded_token[2]
-
-    # The issuer is encoded in the payload of the token.
-    issuer_url = payload["iss"]
-    public_key = requests.get(issuer_url, verify=False).json()["public_key"]
-    key = "-----BEGIN PUBLIC KEY-----\n" + public_key + "\n-----END PUBLIC KEY-----"
-
-    # If the token is valid, we can now decode it using the public key.
-    try:
-        decoded = jwt.decode(token, key, audience=payload["aud"], algorithms=header["alg"])
-        session["user"] = payload["name"]
-        return True
-    except Exception as e:
-        print(str(e))
-        return False
+client_base_url = config["DEFAULT"]["client_base_url"]
+client_id = config["oidc"]["client_id"]
+client_uid = config["oidc"]["client_uid"]
+authorization_base_url = config["oidc"]["authorization_base_url"]
+logout_url = config["oidc"]["logout_url"]
+token_url = config["oidc"]["token_url"]
+login_callback_url = config["oidc"]["login_callback_url"]
+token_callback_url = config["oidc"]["token_callback_url"]
 
 
 @app.route("/")
 def home():
-    """Step 5: User authorization successful.
+    if not "user_uid" in session:
+        return """
+        <h1>Welcome</h1>
+        <p><a href="{}">Login</a></p>
+        """.format(url_for(".login"))
 
-    Show a welcome message and display the token.
-    """
-    if not "oauth_token" in session:
-        return redirect(url_for(".login"))
-    if not verify_token(session['oauth_token'].get("access_token")):
-        return redirect(url_for(".login"))
+    offline_sessions = get_keycloak_offline_sessions(config)
+    if len(offline_sessions) != 0:
+        session_start = int(offline_sessions[0]["start"]) / 1000
+        session_accessed = int(offline_sessions[0]["lastAccess"])
+        session_start_time = datetime.fromtimestamp(session_start).strftime("%Y-%m-%d %H:%M:%S")
+        session_accessed_time = datetime.fromtimestamp(session_accessed).strftime("%Y-%m-%d %H:%M:%S")
 
-    user = session['user']
-    token = session['oauth_token'].get("access_token")
+        session_str = """
+        <p>You have an active offline token.</p>
+        <p>Created: {} <br/> Last used: {} <br/> <a href="{}">Invalidate token</a></p>
+        """.format(session_start_time, session_accessed_time, url_for(".invalidate_session"))
+    else:
+        session_str = """
+        <p>You currently don't have an offline token set up.</p>
+        <p><a href="{}">Create an offline token</a></p>
+        """.format(url_for(".get_token"))
+
+    offline_token = session.get("offline_token")
+    if offline_token:
+        token_str = """
+        <p>Your token:</p>
+        <textarea disabled style="width:640px;height:160px;resize:none">{}</textarea>
+        """.format(offline_token)
+    else:
+        token_str = ""
+
     return """
-    <h1>Welcome {}!</h1>
-    <code style="overflow-wrap:anywhere">Your access token: <br/> {}</code>
-    <p><a href="/profile">Profile</a></p>
-    <p><a href="/logout">Logout</a></p>
-    """.format(user, token)
+    <h1>Welcome (<a href="{}">Logout</a>)</h1>
+    <p>{}</p>
+    <p>{}</p>
+    """.format(url_for(".logout"), session_str, token_str)
 
 
-@app.route("/profile", methods=["GET"])
-def profile():
-    """ Step 6: Fetching protected resources using the access token.
+@app.route("/login")
+def login():
+    oauth = OAuth2Session(client_id, redirect_uri=login_callback_url)
+    authorization_url, state = oauth.authorization_url(authorization_base_url)
 
-    Use the access token to fetch some information about the user from the
-    identity provider.
-    """
-    if not "oauth_token" in session:
-        return redirect(url_for(".login"))
-    if not verify_token(session['oauth_token'].get("access_token")):
-        return redirect(url_for(".login"))
-
-    oauth = OAuth2Session(client_id, token=session["oauth_token"])
-    return jsonify(oauth.get(protected_url, verify=False).json())
+    session["oauth_state"] = state
+    target_url = f"{logout_url}?redirect_uri={quote(authorization_url)}"
+    return redirect(target_url)
 
 
-@app.route("/logout", methods=["GET"])
+@app.route("/login-callback", methods=["GET"])
+def login_callback():
+    oauth = OAuth2Session(client_id, redirect_uri=login_callback_url, state=session["oauth_state"])
+    oauth_token = oauth.fetch_token(token_url, authorization_response=request.url, verify=False)
+
+    d = oauth_token.get("access_token").split(".")[1]
+    decoded_token = base64.urlsafe_b64decode(d + "=" * (-len(d) % 4))
+    payload = json.loads(decoded_token)
+    session["user_uid"] = payload["sub"]
+
+    return redirect(url_for(".home"))
+
+
+@app.route("/get_token")
+def get_token():
+    oauth = OAuth2Session(client_id, redirect_uri=token_callback_url, scope="offline_access")
+    authorization_url, state = oauth.authorization_url(authorization_base_url)
+
+    session["oauth_state"] = state
+    return redirect(authorization_url)
+
+
+@app.route("/token-callback", methods=["GET"])
+def token_callback():
+    oauth = OAuth2Session(client_id, redirect_uri=token_callback_url, state=session["oauth_state"])
+    oauth_token = oauth.fetch_token(token_url, authorization_response=request.url, verify=False)
+
+    offline_token = oauth_token.get("refresh_token")
+    session["offline_token"] = offline_token
+
+    return redirect(url_for(".home"))
+
+
+@app.route("/invalidate_session")
+def invalidate_session():
+    invalidate_keycloak_session(config)
+    return redirect(url_for(".home"))
+
+
+def get_keycloak_offline_sessions(config):
+    token = get_keycloak_token(config)
+    headers = {
+        "Accept": "application/json",
+        "Authorization": "Bearer %s" % token["access_token"],
+    }
+    user_uid = session["user_uid"]
+    url = config["hzb"]["admin_url"] + \
+        f"/users/{user_uid}/offline-sessions/{client_uid}"
+    r = requests.get(url, headers=headers)
+    r.raise_for_status()
+    return r.json()
+
+
+def invalidate_keycloak_session(config):
+    token = get_keycloak_token(config)
+    headers = {
+        "Accept": "application/json",
+        "Authorization": "Bearer %s" % token["access_token"],
+    }
+    user_uid = session["user_uid"]
+    url = config["hzb"]["admin_url"] + \
+        f"/users/{user_uid}/consents/{client_id}"
+    r = requests.delete(url, headers=headers)
+    r.raise_for_status()
+
+
+def get_keycloak_token(config):
+    data = {
+        "grant_type": "client_credentials",
+        "client_id": config["admin-cli"]["client_id"],
+        "client_secret": config["admin-cli"]["client_secret"],
+    }
+    url = config["admin-cli"]["realm_url"] + \
+        "/protocol/openid-connect/token"
+    r = requests.post(url, data=data)
+    r.raise_for_status()
+    return r.json()
+
+
+@app.route("/logout")
 def logout():
-    """ Step 7: Logout the user.
-
-    End the session for the user and redirect back to the client base URL.
-    """
-    if not "oauth_token" in session:
-        return redirect(url_for(".login"))
     session.clear()
-    return redirect(f"{logout_url}?redirect_uri={quote(client_url)}")
+    target_url = f"{logout_url}?redirect_uri={quote(client_base_url)}"
+    return redirect(target_url)
 
 
 if __name__ == "__main__":
@@ -145,4 +170,4 @@ if __name__ == "__main__":
     os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
 
     app.secret_key = os.urandom(24)
-    app.run(host="0.0.0.0", debug=True)
+    app.run(host="localhost", debug=True)
