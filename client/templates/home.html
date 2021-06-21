@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/static/style.css">
+    <title>Keycloak Tokens</title>
+</head>
+<body>
+    {% if "user_uid" not in session %}
+        <h1>Welcome</h1>
+        <p><a href="{{ login_url }}">Login</a></p>
+    {% else %}
+        <h1>Welcome (<a href="{{ logout_url }}">Logout</a>)</h1>
+
+        {% if offline_session %}
+            <p>You have an active offline token.</p>
+            <p>
+                Created: {{ offline_session.start_time }} <br/>
+                Last used: {{ offline_session.accessed_time }} <br/>
+                <a href="{{ invalidate_url }}">Invalidate token</a>
+            </p>
+        {% else %}
+            <p>You currently don't have an offline token set up.</p>
+            <p><a href="{{ token_url }}">Create an offline token</a></p>
+        {% endif %}
+
+        {% if offline_token %}
+            <p>Your token:</p>
+            <textarea disabled>{{ offline_token }}</textarea>
+        {% endif %}
+    {% endif %}
+</body>
+</html>

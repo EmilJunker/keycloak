@@ -5,9 +5,8 @@ import os
 from datetime import datetime
 from urllib.parse import quote
 
-import jwt
 import requests
-from flask import Flask, redirect, request, session, url_for
+from flask import Flask, redirect, request, session, url_for, render_template
 from flask.json import jsonify
 from requests_oauthlib import OAuth2Session
 
@@ -30,43 +29,25 @@ token_callback_url = config["oidc"]["token_callback_url"]
 
 @app.route("/")
 def home():
-    if not "user_uid" in session:
-        return """
-        <h1>Welcome</h1>
-        <p><a href="{}">Login</a></p>
-        """.format(url_for(".login"))
+    offline_session = {}
+    offline_token = ""
+    if "user_uid" in session:
+        offline_sessions = get_keycloak_offline_sessions(config)
+        if len(offline_sessions) != 0:
+            session_start = int(offline_sessions[0]["start"]) / 1000
+            session_accessed = int(offline_sessions[0]["lastAccess"])
+            session_start_time = datetime.fromtimestamp(session_start).strftime("%Y-%m-%d %H:%M:%S")
+            session_accessed_time = datetime.fromtimestamp(session_accessed).strftime("%Y-%m-%d %H:%M:%S")
+            offline_session = {"start_time": session_start_time, "accessed_time": session_accessed_time}
+        offline_token = session.get("offline_token")
 
-    offline_sessions = get_keycloak_offline_sessions(config)
-    if len(offline_sessions) != 0:
-        session_start = int(offline_sessions[0]["start"]) / 1000
-        session_accessed = int(offline_sessions[0]["lastAccess"])
-        session_start_time = datetime.fromtimestamp(session_start).strftime("%Y-%m-%d %H:%M:%S")
-        session_accessed_time = datetime.fromtimestamp(session_accessed).strftime("%Y-%m-%d %H:%M:%S")
-
-        session_str = """
-        <p>You have an active offline token.</p>
-        <p>Created: {} <br/> Last used: {} <br/> <a href="{}">Invalidate token</a></p>
-        """.format(session_start_time, session_accessed_time, url_for(".invalidate_session"))
-    else:
-        session_str = """
-        <p>You currently don't have an offline token set up.</p>
-        <p><a href="{}">Create an offline token</a></p>
-        """.format(url_for(".get_token"))
-
-    offline_token = session.get("offline_token")
-    if offline_token:
-        token_str = """
-        <p>Your token:</p>
-        <textarea disabled style="width:640px;height:160px;resize:none">{}</textarea>
-        """.format(offline_token)
-    else:
-        token_str = ""
-
-    return """
-    <h1>Welcome (<a href="{}">Logout</a>)</h1>
-    <p>{}</p>
-    <p>{}</p>
-    """.format(url_for(".logout"), session_str, token_str)
+    return render_template("home.html",
+                           login_url=url_for(".login"),
+                           logout_url=url_for(".logout"),
+                           token_url=url_for(".get_token"),
+                           invalidate_url=url_for(".invalidate_session"),
+                           offline_session=offline_session,
+                           offline_token=offline_token)
 
 
 @app.route("/login")
