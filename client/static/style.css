@@ -1,9 +1,52 @@
 body {
     font-family: sans-serif;
+    font-size: 14pt;
+    margin: 0;
 }
 
-textarea {
-    width: 640px;
-    height: 160px;
-    resize: none;
+body a {
+    color: #00589c;
+    text-decoration: none;
+}
+
+.top-bar {
+    margin: 0.4em 0;
+    padding: 0.2em 0.8em;
+    min-height: 1.4em;
+    background-color: #becd00;
+    text-align: right;
+}
+
+.top-bar a {
+    font-size: 16pt;
+}
+
+.content {
+    width: 90%;
+    max-width: 56em;
+    margin: auto;
+}
+
+.text {
+    margin: 6em auto;
+}
+
+.item {
+    margin: 0.6em;
+}
+
+.tag {
+    background-color: #aaccdd;
+    border-radius: 0.4em;
+    padding: 0.2em;
+    margin-right: 0.2em;
+}
+
+.token {
+    background-color: #eeeeee;
+    border: 0.1em solid #cccccc;
+    padding: 0.2em;
+    word-break: break-all;
+    font-family: monospace;
+    font-size: 12pt;
 }

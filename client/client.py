@@ -2,13 +2,17 @@ import base64
 import configparser
 import json
 import os
+import time
 from datetime import datetime
 from urllib.parse import quote
 
 import requests
-from flask import Flask, redirect, request, session, url_for, render_template
+from flask import Flask, redirect, render_template, request, session, url_for
 from flask.json import jsonify
 from requests_oauthlib import OAuth2Session
+
+os.environ["TZ"] = "Europe/Berlin"
+time.tzset()
 
 app = Flask(__name__)
 
